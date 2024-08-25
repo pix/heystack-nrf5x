@@ -1,0 +1,45 @@
+.PHONY: merge bin stflash
+
+HAS_DEBUG ?= 0
+
+ifeq ($(HAS_DEBUG), 1)
+	CFLAGS += -DNRF_LOG_ENABLED=1 -DNRF_LOG_BACKEND_RTT_ENABLED=1 -DHAS_DEBUG=1
+	ASMFLAGS += -DNRF_LOG_ENABLED=1 -DNRF_LOG_BACKEND_SERIAL_USES_RTT=1 -DHAS_DEBUG=1
+else
+	CFLAGS += -DNRF_LOG_ENABLED=0 -DNRF_LOG_BACKEND_SERIAL_USES_RTT=0 -DHAS_DEBUG=0
+	ASMFLAGS += -DNRF_LOG_ENABLED=0 -DNRF_LOG_BACKEND_SERIAL_USES_RTT=0 -DHAS_DEBUG=0
+endif
+
+MAX_KEYS ?= 0
+ifneq ($(MAX_KEYS), 0)
+	CFLAGS += -DMAX_KEYS=$(MAX_KEYS)
+	ASMFLAGS += -DMAX_KEYS=$(MAX_KEYS)
+endif
+
+merge: $(TARGETS)
+	@echo merging application and softdevice...␍
+	mergehex -m $(OUTPUT_DIRECTORY)/$(TARGETS).hex $(SDK_ROOT)/components/softdevice/$(SOFTDEVICE_MODEL)/hex/$(SOFTDEVICE_MODEL)_$(NRF_BASE_MODEL)_$(SOFTDEVICE_VERSION)_softdevice.hex -o $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).hex
+
+bin: merge
+	hex2bin.py $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).hex $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin
+
+patched: bin
+ifneq ($(wildcard $(ADV_KEYS_FILE)),)
+	cp $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin
+	xxd -p -c 100000 $(ADV_KEYS_FILE) | xxd -r -p | \
+	dd of=$(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc
+	# Now check if ENDOFKEYSENDOFKEYSENDOFKEYS! is still in the file and not overwritten in the compiled binary, fail if it is
+	xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100000) && \
+		echo "Keys successfully patched!" || \
+		$(shell echo "The key file $(ADV_KEYS_FILE) is too large to fit in the binary!" && exit 1)
+else
+	$(error The file $(ADV_KEYS_FILE) does not exist!)
+endif
+
+stflash: bin
+	@echo flashing application and softdevice...␍
+	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin verify; reset; exit";
+
+stflash-patched: patched
+	@echo flashing application and softdevice...␍
+	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin verify; reset; exit";
