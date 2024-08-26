@@ -58,6 +58,24 @@ cd nrf51822/armgcc
 make clean
 make stflash-patched MAX_KEYS=50 ADV_KEYS_FILE=./50_NRF_keyfile
 ```
+### Flashing with Raspberry Pi
+
+If you're using a Raspberry Pi for flashing instead of a STLink V2 programmer, you can change the OpenOCD configuration file. Toggle between the configuration for the STLink V2 and Raspberry Pi by modifying the OpenOCD script.
+
+Locate the configuration line in your `openocd.cfg` file:
+
+```bash
+source [find interface/stlink.cfg]
+```
+
+To use a Raspberry Pi for flashing, comment out the STLink line and uncomment the Raspberry Pi configuration line:
+
+```bash
+# source [find interface/stlink.cfg]
+source [find interface/raspberrypi2-native.cfg]
+```
+
+This change allows you to use the Raspberry Pi GPIO pins for flashing your device instead of the STLink programmer.
 
 ### Debugging with strtt
 
