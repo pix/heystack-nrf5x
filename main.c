@@ -72,7 +72,7 @@
 #endif
 
 // Create space for MAX_KEYS public keys
-static char public_key[MAX_KEYS+1][28] = { 
+static const char public_key[MAX_KEYS+1][28] = {
     [0] = "OFFLINEFINDINGPUBLICKEYHERE!",
     [MAX_KEYS] = "ENDOFKEYSENDOFKEYSENDOFKEYS!",
 };

@@ -29,9 +29,9 @@ ifneq ($(wildcard $(ADV_KEYS_FILE)),)
 	xxd -p -c 100000 $(ADV_KEYS_FILE) | xxd -r -p | \
 	dd of=$(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc
 	# Now check if ENDOFKEYSENDOFKEYSENDOFKEYS! is still in the file and not overwritten in the compiled binary, fail if it is
-	xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100000) && \
+	@xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100000) && \
 		echo "Keys successfully patched!" || \
-		$(shell echo "The key file $(ADV_KEYS_FILE) is too large to fit in the binary!" && exit 1)
+		(echo "The key file $(ADV_KEYS_FILE) is too large to fit in the binary!" && exit 1)
 else
 	$(error The file $(ADV_KEYS_FILE) does not exist!)
 endif

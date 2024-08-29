@@ -19,7 +19,7 @@ define build_target
 $(1):
 	$$(MAKE) -C $(1)/armgcc \
 		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$(1)),$(GNU_INSTALL_ROOT)/,$(GNU_INSTALL_ROOT)/bin/) \
-		MAX_KEYS=$$(if $$(findstring nrf51,$(1)),50,100) \
+		MAX_KEYS=500 \
 		HAS_DEBUG=$(HAS_DEBUG) \
 		bin
 
@@ -40,4 +40,3 @@ all: $(TARGETS)
 
 clean: $(foreach target,$(TARGETS),$(target)-clean)
 	rm -rf ./release
-
