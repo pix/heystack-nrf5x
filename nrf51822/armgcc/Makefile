@@ -159,7 +159,6 @@ CFLAGS += -DNRF51
 CFLAGS += -DNRF51822
 CFLAGS += $(SOFTDEVICE_FLAGS)
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
-CFLAGS += -DBOARD_CUSTOM
 CFLAGS += -DNRF_SD_BLE_API_VERSION=2
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs
@@ -180,7 +179,6 @@ ASMFLAGS += -DNRF51
 ASMFLAGS += -DNRF51822
 ASMFLAGS += $(SOFTDEVICE_FLAGS)
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
-ASMFLAGS += -DBOARD_CUSTOM
 ASMFLAGS += -DNRF_SD_BLE_API_VERSION=2
 
 # Linker flags
@@ -222,5 +220,11 @@ flash_softdevice:
 
 erase:
 	nrfjprog --eraseall -f nrf52
+
+BOARD ?= default_board
+ifeq ($(BOARD), custom_board)
+  override BOARD = default_board
+else
+endif
 
 include $(NRF_ROOT)/Makefile.common

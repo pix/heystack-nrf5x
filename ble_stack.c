@@ -29,15 +29,23 @@ size_t offline_finding_adv_len = sizeof(offline_finding_adv);
 void ble_set_max_tx_power(void)
 {
     uint32_t err_code;
-    // Set the transmit power to +4 dBm (maximum for nRF52 series)
-    int8_t max_tx_power = 4;
-
-    #if NRF_SDK_VERSION >= 15
-    err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, adv_handle, max_tx_power);
-    #else
-    err_code = sd_ble_gap_tx_power_set(max_tx_power);
-    #endif
-
+    // Set the transmit power to the maximum allowed by the hardware.
+    int8_t powers[] = { 8, 7, 6, 5, 4 };
+    for (int i = 0; i < sizeof(powers) / sizeof(powers[0]); i++) {
+        int8_t max_tx_power = powers[i];
+        #if NRF_SDK_VERSION >= 15
+        err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, adv_handle, max_tx_power);
+        #else
+        err_code = sd_ble_gap_tx_power_set(max_tx_power);
+        #endif
+        max_tx_power = powers[i];
+        if (err_code == NRF_SUCCESS) {
+            COMPAT_NRF_LOG_INFO("ble_set_max_tx_power: %d dBm", max_tx_power);
+            break;
+        } else {
+            COMPAT_NRF_LOG_INFO("ble_set_max_tx_power: %d dBm failed", max_tx_power);
+        }
+    }
     APP_ERROR_CHECK(err_code);
 }
 
@@ -109,7 +117,7 @@ void ble_advertising_init(void)
         // Set the advertising type to non-connectable.
         adv_params.properties.type = BLE_GAP_ADV_TYPE_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED;
         // Set advertising interval (in 0.625 ms units).
-        adv_params.interval = MSEC_TO_UNITS(1000, UNIT_0_625_MS);
+        adv_params.interval = MSEC_TO_UNITS(ADVERTISING_INTERVAL, UNIT_0_625_MS);
         // Set advertising timeout to zero (no timeout).
         adv_params.duration = 0;
         // Set the filter policy to allow all.
@@ -128,13 +136,10 @@ void ble_advertising_init(void)
         adv_params.p_peer_addr = NULL;
         adv_params.fp = BLE_GAP_ADV_FP_ANY;
         // Set the advertising interval (in units of 0.625 ms).
-        adv_params.interval = MSEC_TO_UNITS(1000, UNIT_0_625_MS);
+        adv_params.interval = MSEC_TO_UNITS(ADVERTISING_INTERVAL, UNIT_0_625_MS);
         adv_params.timeout = 0;
         sd_ble_gap_adv_start(&adv_params);
     #endif
-
-    // Set the maximum transmit power for advertising.
-    ble_set_max_tx_power();
 }
 
 /*
@@ -183,6 +188,9 @@ uint8_t ble_set_advertisement_key(const char *key)
         uint32_t err_code = sd_ble_gap_adv_data_set(offline_finding_adv, offline_finding_adv_len, NULL, 0);
 	    APP_ERROR_CHECK(err_code);
     #endif
+
+    // Set the maximum transmit power for advertising.
+    ble_set_max_tx_power();
 
 	return offline_finding_adv_len;
 }

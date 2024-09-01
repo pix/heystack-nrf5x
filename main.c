@@ -51,25 +51,7 @@
 #include "boards.h"
 #include "app_timer.h"
 #include "app_button.h"
-
-
-#include "nrf5x-compat.h"
-#include "ble_stack.h"
-
-#ifndef RANDOM_ROTATE_KEYS
-#define RANDOM_ROTATE_KEYS 1
-#endif
-
-#ifndef MAX_KEYS
-// Maximum number of public keys to rotate
-// Can be set during compilation with make MAX_KEYS=10
-#define MAX_KEYS 50
-#endif
-
-#ifndef KEY_ROTATION_INTERVAL
-// Key rotation interval in seconds
-#define KEY_ROTATION_INTERVAL 3600 * 3
-#endif
+#include "main.h"
 
 // Create space for MAX_KEYS public keys
 static const char public_key[MAX_KEYS+1][28] = {
@@ -122,6 +104,38 @@ int randmod(int mod) {
 
 #endif
 
+#ifdef HAS_RADIO_PA
+// Credits: https://forum.mysensors.org/topic/10198/nrf51-52-pa-not-support
+static void pa_lna_assist(uint32_t gpio_pa_pin, uint32_t gpio_lna_pin)
+{
+    ret_code_t err_code;
+
+    static const uint32_t gpio_toggle_ch = 0;
+    static const uint32_t ppi_set_ch = 0;
+    static const uint32_t ppi_clr_ch = 1;
+
+    // Configure SoftDevice PA/LNA assist
+    ble_opt_t opt;
+    memset(&opt, 0, sizeof(ble_opt_t));
+    // Common PA/LNA config
+    opt.common_opt.pa_lna.gpiote_ch_id  = gpio_toggle_ch;        // GPIOTE channel
+    opt.common_opt.pa_lna.ppi_ch_id_clr = ppi_clr_ch;            // PPI channel for pin clearing
+    opt.common_opt.pa_lna.ppi_ch_id_set = ppi_set_ch;            // PPI channel for pin setting
+    // PA config
+    opt.common_opt.pa_lna.pa_cfg.active_high = 1;                // Set the pin to be active high
+    opt.common_opt.pa_lna.pa_cfg.enable      = 1;                // Enable toggling
+    opt.common_opt.pa_lna.pa_cfg.gpio_pin    = gpio_pa_pin;      // The GPIO pin to toggle
+
+    // LNA config
+    opt.common_opt.pa_lna.lna_cfg.active_high  = 1;              // Set the pin to be active high
+    opt.common_opt.pa_lna.lna_cfg.enable       = 1;              // Enable toggling
+    opt.common_opt.pa_lna.lna_cfg.gpio_pin     = gpio_lna_pin;   // The GPIO pin to toggle
+
+    err_code = sd_ble_opt_set(BLE_COMMON_OPT_PA_LNA, &opt);
+    APP_ERROR_CHECK(err_code);
+    COMPAT_NRF_LOG_INFO("PA/LNA assist enabled on pins: PA=%d, LNA=%d", gpio_pa_pin, gpio_lna_pin);
+}
+#endif
 
 void set_and_advertise_next_key(void *p_context)
 {
@@ -319,6 +333,12 @@ int main(void)
 
     // Initialize advertising.
     ble_advertising_init();
+
+#ifdef HAS_RADIO_PA
+    // Configure the PA/LNA
+    pa_lna_assist(GPIO_PA_PIN, GPIO_LNA_PIN);
+#endif
+
 
     COMPAT_NRF_LOG_INFO("Starting advertising");
 

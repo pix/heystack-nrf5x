@@ -9,7 +9,9 @@ and support for newer nRF5x devices and SDKs.
 
 - **nRF52810**: Tested on an original Tile Tag.
 - **nRF51822**: Tested on an aliexpress tag.
-- Other nRF devices might be supported, but untested.
+- **nRF52832**: Tested with the YJ-17024 board (see link below).
+
+Other nRF devices might be supported, but untested.
 
 These aliexpress tags should work with the nRF52810 firmware:
 
@@ -20,6 +22,11 @@ These aliexpress tags works with the nRF51822 firmware:
 - [1: NRF51822](https://s.click.aliexpress.com/e/_De2JHyL)
 - [2: NRF51822](https://s.click.aliexpress.com/e/_DdkWkyJ)
 - [3: NRF51822](https://s.click.aliexpress.com/e/_DBp4icn)
+
+This AliExpress tag works with the nRF52832 firmware:
+
+- [HolyIOT YJ-17024-NRF52832 Amplified Module](https://s.click.aliexpress.com/e/_DlpmE0n): [Manufacturer's documentation](http://www.holyiot.com/eacp_view.asp?id=299).
+- [HolyIOT YJ-17095-NRF52832](https://s.click.aliexpress.com/e/_DCkw8LV)
 
 These are affiliate links, so if you buy something using them, I get a small commission, and you help me to keep working on this project.
 
@@ -49,6 +56,13 @@ make clean
 make stflash
 ```
 
+To compile the firmware for the nRF52832 with the YJ-17024 board configuration, use the following command:
+
+```bash
+cd nrf52832/armgcc
+make clean
+make stflash BOARD=yj17024
+
 You can directly flash the firmware with the keys using the following command:
 
 ```bash
@@ -76,6 +90,18 @@ source [find interface/raspberrypi2-native.cfg]
 ```
 
 This change allows you to use the Raspberry Pi GPIO pins for flashing your device instead of the STLink programmer.
+
+### Makefile Variables Summary
+
+This section describes key Makefile variables you can adjust to customize the firmware:
+
+- **HAS_DEBUG**: Controls debug logging; set to `1` to enable or `0` to disable (default).
+- **MAX_KEYS**: Defines the maximum number of keys supported;
+- **KEY_ROTATION_INTERVAL**: Sets the key rotation interval in seconds (default is 3600 * 3 seconds);
+- **ADVERTISING_INTERVAL**: Adjusts Bluetooth advertising interval; `0` (default) uses the standard interval (1000ms);
+- **BOARD**: Specifies the custom board configuration; defaults to `custom_board` (see `custom_board.h`), but can be overridden with your board's configuration. For example, set `BOARD=yj17024` for the nRF52832 device.
+- **ADV_KEYS_FILE**: Specifies the file containing the keys to be flashed to the device.
+- **GNU_INSTALL_ROOT**: Path to the GNU toolchain; eg: ../../nrf-sdk/gcc-arm-none-eabi-6-2017-q2-update/bin/
 
 ### Debugging with strtt
 

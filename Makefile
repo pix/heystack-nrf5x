@@ -4,7 +4,7 @@ HAS_DEBUG ?= 0
 GNU_INSTALL_ROOT ?= $(CURDIR)/nrf-sdk/gcc-arm-none-eabi-6-2017-q2-update
 
 
-TARGETS := nrf51822 nrf52810
+TARGETS := nrf51822 nrf52810 nrf52832
 
 help:
 	@echo "Usage: make [target]"

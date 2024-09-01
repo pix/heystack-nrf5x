@@ -1,4 +1,6 @@
 /nrf-sdk
+/release
 
+ram.bin
 _build/
 
