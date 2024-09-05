@@ -50,6 +50,7 @@ ifneq ($(wildcard $(ADV_KEYS_FILE)),)
 	@xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100000) && \
 		echo "Keys successfully patched!" || \
 		(echo "The key file $(ADV_KEYS_FILE) is too large to fit in the binary!" && exit 1)
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.elf
 else
 	$(error The file $(ADV_KEYS_FILE) does not exist!)
 endif
@@ -61,3 +62,39 @@ stflash: bin
 stflash-patched: patched
 	@echo flashing application and softdevice...␍
 	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin verify; reset; exit";
+
+PREFIX		?= arm-none-eabi
+GDB		:= $(PREFIX)-gdb
+SCRIPT_DIR	:= scripts
+
+ifeq ($(BMP_PORT),)
+BMP_PORT_CANDIDATES := $(wildcard \
+/dev/serial/by-id/usb-Black_Magic*_*-if00 \
+/dev/cu.usbmodem*1)
+ifeq ($(words $(BMP_PORT_CANDIDATES)),1)
+BMP_PORT := $(BMP_PORT_CANDIDATES)
+else
+BMP_PORT = $(error Black Magic Probe gdb serial port not found, please provide the device name via the BMP_PORT variable parameter$(if \
+$(BMP_PORT_CANDIDATES), (found $(BMP_PORT_CANDIDATES))))
+endif
+endif
+
+bmpflash-patched: patched
+	@printf "  BMP $(BMP_PORT) (flash)\n"
+	$(Q)$(GDB) -nx --batch \
+	           -ex 'target extended-remote $(BMP_PORT)' \
+			   -ex 'monitor swdp_scan' \
+			   -ex 'attach 1' \
+			   -ex 'load' \
+			   -ex 'compare-sections' \
+			   -ex 'kill' \
+	           $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.elf
+
+bmpflash-unlock: patched
+	@printf "  BMP $(BMP_PORT) (erasing)\n"
+	$(Q)$(GDB) -nx --batch \
+	           -ex 'target extended-remote $(BMP_PORT)' \
+			   -ex 'set non-stop on' \
+			   -ex 'monitor swdp_scan' \
+			   -ex 'attach 2' \
+			   -ex 'monitor erase_mass' \

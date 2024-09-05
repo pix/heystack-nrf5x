@@ -339,7 +339,6 @@ int main(void)
     pa_lna_assist(GPIO_PA_PIN, GPIO_LNA_PIN);
 #endif
 
-
     COMPAT_NRF_LOG_INFO("Starting advertising");
 
     // Set the first key to be advertised

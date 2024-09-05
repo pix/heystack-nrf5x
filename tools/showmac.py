@@ -1,5 +1,6 @@
 #!pipx run
 import argparse
+import sys
 
 def compute_mac_from_key(key):
     return [
@@ -17,7 +18,11 @@ def extract_macs(file_path):
     
     num_keys = data[0]
     macs = []
-    
+
+    num_keys = max(num_keys, (len(data) - 1) // 28)
+    if num_keys != data[0]:
+        print(f"Warning: Expected {data[0]} keys, but found {num_keys} keys.", file=sys.stderr)
+
     for i in range(num_keys):
         key = data[1 + i*28 : 1 + (i+1)*28]
         mac = compute_mac_from_key(key)
