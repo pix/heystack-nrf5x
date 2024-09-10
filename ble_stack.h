@@ -12,7 +12,7 @@
 #include "nrf5x-compat.h"
 
 #if NRF_SDK_VERSION < 15
-#define APP_TIMER_PRESCALER 0
+#define APP_TIMER_PRESCALER 31
 #define APP_TIMER_MAX_TIMERS 1
 #define APP_TIMER_OP_QUEUE_SIZE 4
 #include "softdevice_handler.h"
