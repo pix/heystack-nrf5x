@@ -4,7 +4,7 @@ HAS_DEBUG ?= 0
 GNU_INSTALL_ROOT ?= $(CURDIR)/nrf-sdk/gcc-arm-none-eabi-6-2017-q2-update
 
 
-TARGETS := nrf51822 nrf52810 nrf52832
+TARGETS := nrf51822_xxac nrf52810_xxaa nrf52832_xxaa nrf52832_yj17024
 
 help:
 	@echo "Usage: make [target]"
@@ -16,19 +16,20 @@ help:
 # Define a recipe to build each target individually
 define build_target
 .PHONY: $(1)
+DIR_$(1) := $(shell echo $(1) | cut -d'_' -f1)
 $(1):
-	$$(MAKE) -C $(1)/armgcc \
-		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$(1)),$(GNU_INSTALL_ROOT)/,$(GNU_INSTALL_ROOT)/bin/) \
+	$$(MAKE) -C $$(DIR_$(1))/armgcc \
+		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$$(DIR_$(1))),$$(GNU_INSTALL_ROOT)/,$$(GNU_INSTALL_ROOT)/bin/) \
 		MAX_KEYS=500 \
 		HAS_DEBUG=$(HAS_DEBUG) \
-		bin
+		$(1) bin_$(1)
 
 	mkdir -p ./release
-	cp $(1)/armgcc/_build/*.bin ./release/
+	cp $$(DIR_$(1))/armgcc/_build/*_s???.bin ./release/
 
 $(1)-clean:
-	$$(MAKE) -C $(1)/armgcc clean \
-		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$(1)),$(GNU_INSTALL_ROOT)/,$(GNU_INSTALL_ROOT)/bin/) \
+	$$(MAKE) -C $$(DIR_$(1))/armgcc clean \
+		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$$(DIR_$(1))),$$(GNU_INSTALL_ROOT)/,$$(GNU_INSTALL_ROOT)/bin/)
 
 endef
 

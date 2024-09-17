@@ -1,13 +1,19 @@
 PROJECT_NAME     := ble_app_haystack_s132
-TARGETS          := nrf52832_xxaa
+TARGETS          := nrf52832_xxaa nrf52832_yj17024
 OUTPUT_DIRECTORY := _build
 
 NRF_ROOT := ../..
 SDK_ROOT := $(NRF_ROOT)/nrf-sdk/nRF5_SDK_15.3.0_59ac345
 PROJ_DIR := ../..
 
-$(OUTPUT_DIRECTORY)/nrf52832_xxaa.out: \
+
+define define_targets
+$(OUTPUT_DIRECTORY)/$(1).out:
   LINKER_SCRIPT  := ble_app_haystack_gcc_nrf52.ld
+  TARGET := $(1)
+endef
+
+$(foreach target, $(TARGETS), $(eval $(call define_targets, $(target))))
 
 NRF_BASE_MODEL := nrf52
 SOFTDEVICE_MODEL := s132
@@ -260,6 +266,12 @@ nrf52832_xxaa: CFLAGS += -D__STACK_SIZE=8192
 nrf52832_xxaa: ASMFLAGS += -D__HEAP_SIZE=8192
 nrf52832_xxaa: ASMFLAGS += -D__STACK_SIZE=8192
 
+nrf52832_yj17024: CFLAGS += -D__HEAP_SIZE=8192
+nrf52832_yj17024: CFLAGS += -D__STACK_SIZE=8192
+nrf52832_yj17024: ASMFLAGS += -D__HEAP_SIZE=8192
+nrf52832_yj17024: ASMFLAGS += -D__STACK_SIZE=8192
+nrf52832_yj17024: override BOARD = yj17024
+
 # Add standard libraries at the very end of the linker input, after all objects
 # that may need symbols provided by these libraries.
 LIB_FILES += -lc -lnosys -lm
@@ -273,7 +285,7 @@ default: nrf52832_xxaa
 # Print all targets that can be built
 help:
 	@echo following targets are available:
-	@echo		nrf52832_xxaa
+	@echo		nrf52832_xxaa nrf52832_yj17024
 	@echo		flash_softdevice
 	@echo		sdk_config - starting external tool for editing sdk_config.h
 	@echo		flash      - flashing binary

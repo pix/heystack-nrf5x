@@ -34,34 +34,51 @@ endif
 CFLAGS += -DCUSTOM_BOARD_INC=$(BOARD) -DBOARD_CUSTOM
 ASMFLAGS += -DCUSTOM_BOARD_INC=$(BOARD) -DBOARD_CUSTOM
 
-merge: $(TARGETS)
-	@echo merging application and softdevice...␍
-	mergehex -m $(OUTPUT_DIRECTORY)/$(TARGETS).hex $(SDK_ROOT)/components/softdevice/$(SOFTDEVICE_MODEL)/hex/$(SOFTDEVICE_MODEL)_$(NRF_BASE_MODEL)_$(SOFTDEVICE_VERSION)_softdevice.hex -o $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).hex
 
-bin: merge
-	hex2bin.py $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).hex $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin
+define merge_target
+	mergehex -m $(OUTPUT_DIRECTORY)/$(1).hex $(SDK_ROOT)/components/softdevice/$(SOFTDEVICE_MODEL)/hex/$(SOFTDEVICE_MODEL)_$(NRF_BASE_MODEL)_$(SOFTDEVICE_VERSION)_softdevice.hex -o $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).hex;
+endef
+
+define build_target
+	hex2bin.py $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).hex $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).bin;
+endef
+
+define patch_target
+	cp $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).bin $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin;
+	xxd -p -c 100000 $(ADV_KEYS_FILE) | xxd -r -p | dd of=$(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc;
+	xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100) || (echo "The key was not patched correctly!"; exit 1);
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.elf;
+endef
+
+define merge_target
+merge_$(1):
+	@echo merging application and softdevice... : $(1)
+	mergehex -m $$(OUTPUT_DIRECTORY)/$(1).hex \
+	$$(SDK_ROOT)/components/softdevice/$$(SOFTDEVICE_MODEL)/hex/$$(SOFTDEVICE_MODEL)_$$(NRF_BASE_MODEL)_$$(SOFTDEVICE_VERSION)_softdevice.hex \
+	-o $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).hex
+endef
+
+$(foreach target,$(TARGETS),$(eval $(call merge_target,$(target))))
+
+merge: $(addprefix merge_,$(TARGETS))
+
+define build_target
+bin_$(1): merge_$(1)
+	hex2bin.py $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).hex \
+	$$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).bin
+endef
+
+$(foreach target,$(TARGETS),$(eval $(call build_target,$(target))))
+
+bin: $(addprefix bin_,$(TARGETS))
 
 patched: bin
 ifneq ($(wildcard $(ADV_KEYS_FILE)),)
-	cp $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin
-	xxd -p -c 100000 $(ADV_KEYS_FILE) | xxd -r -p | \
-	dd of=$(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc
-	# Now check if ENDOFKEYSENDOFKEYSENDOFKEYS! is still in the file and not overwritten in the compiled binary, fail if it is
-	@xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100000) && \
-		echo "Keys successfully patched!" || \
-		(echo "The key file $(ADV_KEYS_FILE) is too large to fit in the binary!" && exit 1)
-	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.elf
+	$(foreach target, $(TARGETS), \
+		$(call patch_target,$(target)))
 else
 	$(error The file $(ADV_KEYS_FILE) does not exist!)
 endif
-
-stflash: bin
-	@echo flashing application and softdevice...␍
-	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL).bin verify; reset; exit";
-
-stflash-patched: patched
-	@echo flashing application and softdevice...␍
-	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.bin verify; reset; exit";
 
 PREFIX		?= arm-none-eabi
 GDB		:= $(PREFIX)-gdb
@@ -79,17 +96,6 @@ $(BMP_PORT_CANDIDATES), (found $(BMP_PORT_CANDIDATES))))
 endif
 endif
 
-bmpflash-patched: patched
-	@printf "  BMP $(BMP_PORT) (flash)\n"
-	$(Q)$(GDB) -nx --batch \
-	           -ex 'target extended-remote $(BMP_PORT)' \
-			   -ex 'monitor swdp_scan' \
-			   -ex 'attach 1' \
-			   -ex 'load' \
-			   -ex 'compare-sections' \
-			   -ex 'kill' \
-	           $(OUTPUT_DIRECTORY)/$(TARGETS)_$(SOFTDEVICE_MODEL)_patched.elf
-
 bmpflash-unlock: patched
 	@printf "  BMP $(BMP_PORT) (erasing)\n"
 	$(Q)$(GDB) -nx --batch \
@@ -97,4 +103,25 @@ bmpflash-unlock: patched
 			   -ex 'set non-stop on' \
 			   -ex 'monitor swdp_scan' \
 			   -ex 'attach 2' \
-			   -ex 'monitor erase_mass' \
+			   -ex 'monitor erase_mass'
+
+
+define flash_targets
+.PHONY: stflash-$(1)-patched bmpflash-$(1)-patched
+stflash-$(1)-patched: patched
+	@echo flashing application and softdevice...␍
+	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin verify; reset; exit";
+
+bmpflash-$(1)-patched: patched
+	@printf "  BMP $$(BMP_PORT) (flash)\n"
+	$$(Q)$$(GDB) -nx --batch \
+	           -ex 'target extended-remote $$(BMP_PORT)' \
+			   -ex 'monitor swdp_scan' \
+			   -ex 'attach 1' \
+			   -ex 'load' \
+			   -ex 'compare-sections' \
+			   -ex 'kill' \
+	           $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.elf
+endef
+
+$(foreach target, $(TARGETS), $(eval $(call flash_targets,$(target))))
