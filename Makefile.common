@@ -36,21 +36,6 @@ ASMFLAGS += -DCUSTOM_BOARD_INC=$(BOARD) -DBOARD_CUSTOM
 
 
 define merge_target
-	mergehex -m $(OUTPUT_DIRECTORY)/$(1).hex $(SDK_ROOT)/components/softdevice/$(SOFTDEVICE_MODEL)/hex/$(SOFTDEVICE_MODEL)_$(NRF_BASE_MODEL)_$(SOFTDEVICE_VERSION)_softdevice.hex -o $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).hex;
-endef
-
-define build_target
-	hex2bin.py $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).hex $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).bin;
-endef
-
-define patch_target
-	cp $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).bin $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin;
-	xxd -p -c 100000 $(ADV_KEYS_FILE) | xxd -r -p | dd of=$(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc;
-	xxd -p -c 100000 $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin | grep -q $(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100) || (echo "The key was not patched correctly!"; exit 1);
-	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.elf;
-endef
-
-define merge_target
 merge_$(1):
 	@echo merging application and softdevice... : $(1)
 	mergehex -m $$(OUTPUT_DIRECTORY)/$(1).hex \
@@ -70,13 +55,22 @@ endef
 
 $(foreach target,$(TARGETS),$(eval $(call build_target,$(target))))
 
+define patch_target
+patched_$(1): bin_$(1) $(ADV_KEYS_FILE)
+	@echo Patching $(1)
+	cp $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).bin $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin
+	xxd -p -c 100000 $$(ADV_KEYS_FILE) | xxd -r -p | dd of=$$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc
+	xxd -p -c 100000 $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin | grep -q $$(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100) || (echo "The key was not patched correctly!"; exit 1)
+	$$(OBJCOPY) -I binary -O elf32-littlearm -B arm $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.elf
+endef
+
+$(foreach target,$(TARGETS),$(eval $(call patch_target,$(target))))
+
+
 bin: $(addprefix bin_,$(TARGETS))
 
-patched: bin
-ifneq ($(wildcard $(ADV_KEYS_FILE)),)
-	$(foreach target, $(TARGETS), \
-		$(call patch_target,$(target)))
-else
+patched: $(addprefix patched_,$(TARGETS))
+ifeq ($(wildcard $(ADV_KEYS_FILE)),)
 	$(error The file $(ADV_KEYS_FILE) does not exist!)
 endif
 
@@ -96,7 +90,7 @@ $(BMP_PORT_CANDIDATES), (found $(BMP_PORT_CANDIDATES))))
 endif
 endif
 
-bmpflash-unlock: patched
+bmpflash-unlock:
 	@printf "  BMP $(BMP_PORT) (erasing)\n"
 	$(Q)$(GDB) -nx --batch \
 	           -ex 'target extended-remote $(BMP_PORT)' \
@@ -105,14 +99,23 @@ bmpflash-unlock: patched
 			   -ex 'attach 2' \
 			   -ex 'monitor erase_mass'
 
+bmpflash-monitor:
+	@printf "  BMP $(BMP_PORT) (monitor)\n"
+	@printf "  minicom -c on -D $$(echo $(BMP_PORT) | sed 's/if00/if02/')\n"
+	@$(Q)$(GDB) -nx --batch \
+	           -ex 'target extended-remote $(BMP_PORT)' \
+			   -ex 'monitor swdp_scan' \
+			   -ex 'attach 1' \
+			   -ex 'mon rtt enable' \
+			   -ex 'run'
 
 define flash_targets
 .PHONY: stflash-$(1)-patched bmpflash-$(1)-patched
-stflash-$(1)-patched: patched
+stflash-$(1)-patched: patched_$(1)
 	@echo flashing application and softdevice...␍
 	openocd -f openocd.cfg -c "init; halt; nrf51 mass_erase; program $(OUTPUT_DIRECTORY)/$(1)_$(SOFTDEVICE_MODEL)_patched.bin verify; reset; exit";
 
-bmpflash-$(1)-patched: patched
+bmpflash-$(1)-patched: patched_$(1)
 	@printf "  BMP $$(BMP_PORT) (flash)\n"
 	$$(Q)$$(GDB) -nx --batch \
 	           -ex 'target extended-remote $$(BMP_PORT)' \
