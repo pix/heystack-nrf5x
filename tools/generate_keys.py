@@ -12,7 +12,7 @@ import string
 from string import Template
 import struct
 
-OUTPUT_FOLDER = 'output/'
+OUTPUT_FOLDER = f'output/'
 TEMPLATE = Template('{'
                     '\"id\": $id,'
                     '\"colorComponents\": ['
@@ -81,6 +81,15 @@ if args.nkeys < 1 or args.nkeys > MAX_KEYS:
         "Number of keys out of range (between 1 and " + str(MAX_KEYS) + ")")
 
 
+prefix = ''
+
+if args.prefix is None:
+    prefix = ''.join(random.choice(string.ascii_uppercase +
+                     string.digits) for _ in range(6))
+else:
+    prefix = args.prefix
+    OUTPUT_FOLDER = f'output-{prefix}/'
+
 current_directory = os.getcwd()
 final_directory = os.path.join(current_directory, OUTPUT_FOLDER)
 
@@ -89,14 +98,6 @@ if os.path.exists(OUTPUT_FOLDER):
 
 os.mkdir(final_directory)
 
-
-prefix = ''
-
-if args.prefix is None:
-    prefix = ''.join(random.choice(string.ascii_uppercase +
-                     string.digits) for _ in range(6))
-else:
-    prefix = args.prefix
 
 if args.yaml:
     yaml = open(OUTPUT_FOLDER + prefix + '_' + args.yaml + '.yaml', 'w')
