@@ -53,7 +53,10 @@ The device can be flashed using a STLink V2 programmer. The programmer should be
 ```bash
 cd nrf51822/armgcc
 make clean
-make stflash
+make stflash-nrf51822_xxac-patched ADV_KEYS_FILE=./50_NRF_keyfile
+```
+
+```bash
 ```
 
 To compile the firmware for the nRF52832 with the YJ-17024 board configuration, use the following command:
@@ -61,17 +64,9 @@ To compile the firmware for the nRF52832 with the YJ-17024 board configuration, 
 ```bash
 cd nrf52832/armgcc
 make clean
-make stflash BOARD=yj17024
-
-You can directly flash the firmware with the keys using the following command:
-
-```bash
-# nrf52810 support 100 (and more) keys
-# nrf51822 support 50 keys
-cd nrf51822/armgcc
-make clean
-make stflash-patched MAX_KEYS=50 ADV_KEYS_FILE=./50_NRF_keyfile
+make stflash-nrf52832_yj17024-patched ADV_KEYS_FILE=./50_NRF_keyfile
 ```
+
 ### Flashing with Raspberry Pi
 
 If you're using a Raspberry Pi for flashing instead of a STLink V2 programmer, you can change the OpenOCD configuration file. Toggle between the configuration for the STLink V2 and Raspberry Pi by modifying the OpenOCD script.
@@ -110,7 +105,47 @@ The firmware supports using strtt for displaying debug logs. To enable this feat
 ```bash
 cd nrf51822/armgcc
 make clean
-make stflash-patched MAX_KEYS=50 HAS_DEBUG=1 ADV_KEYS_FILE=./50_NRF_keyfile
+make stflash-nrf51822_xxac-patched MAX_KEYS=500 HAS_DEBUG=1 ADV_KEYS_FILE=./50_NRF_keyfile
 ```
 
 This will activate debug logging, which can be viewed using `strtt`.
+
+### Using Black Magic Probe
+
+The firmware can also be flashed using a Black Magic Probe. The programmer should be connected to the SWD pins on the device. The following command can be used to flash the firmware:
+
+```bash
+cd nrf52832/armgcc
+make clean
+make bmpflash-nrf52832_yj17024-patched ADV_KEYS_FILE=./50_NRF_keyfileZ
+```
+
+### Using RTT monitor
+
+You can use the RTT monitor to see the debug logs. The following command can be used to monitor the logs:
+
+```bash
+make bmpflash-monitor
+  BMP /dev/serial/by-id/usb-Black_Magic_Debug_Black_Magic_Probe__ST-Link_v2__v1.10.0-1151-g3fe0bc5a-XXXXXXXX-if00 (monitor)
+  minicom -c on -D /dev/serial/by-id/usb-Black_Magic_Debug_Black_Magic_Probe__ST-Link_v2__v1.10.0-1151-g3fe0bc5a-XXXXXXXX-if02
+Target voltage: 3.35V
+....
+```
+
+In another terminal, you can monitor the logs:
+
+```bash
+minicom -c on -D /dev/serial/by-id/usb-Black_Magic_Debug_Black_Magic_Probe__ST-Link_v2__v1.10.0-1151-g3fe0bc5a-XXXXXXXX-if02
+<info> app: last_filled_index: 249
+<info> app: Starting advertising
+<info> app: ble_set_mac_address: D3:7F:6F:DA:64:78
+<info> app: ble_set_max_tx_power: 8 dB failed
+<info> app: ble_set_max_tx_power: 7 dBm failed
+<info> app: ble_set_max_tx_power: 6 dBm failed
+<info> app: ble_set_max_tx_power: 5 dBm failed
+<info> app: ble_set_max_tx_power: 4 dBm
+<info> app: Rotating key: 59
+<info> app: last_filled_index: 249
+[0.000] <info> app: Starting advertising
+[0.000] <info> app: ble_set_mac_address: XX:XX:XX:XX:XX:XX
+```

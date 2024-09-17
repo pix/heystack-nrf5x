@@ -36,7 +36,7 @@ ASMFLAGS += -DCUSTOM_BOARD_INC=$(BOARD) -DBOARD_CUSTOM
 
 
 define merge_target
-merge_$(1):
+merge_$(1): $(1)
 	@echo merging application and softdevice... : $(1)
 	mergehex -m $$(OUTPUT_DIRECTORY)/$(1).hex \
 	$$(SDK_ROOT)/components/softdevice/$$(SOFTDEVICE_MODEL)/hex/$$(SOFTDEVICE_MODEL)_$$(NRF_BASE_MODEL)_$$(SOFTDEVICE_VERSION)_softdevice.hex \
