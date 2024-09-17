@@ -182,7 +182,7 @@ static void timers_init(void)
     #if NRF_SDK_VERSION < 15
         // Specify the timer operation queue size, e.g., 10
         APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, NULL);
-    #else  // For SDK 12 and below
+    #else  // For SDK 15 and later
         int err_code = app_timer_init();
         APP_ERROR_CHECK(err_code);
     #endif
