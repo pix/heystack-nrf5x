@@ -90,10 +90,12 @@ This change allows you to use the Raspberry Pi GPIO pins for flashing your devic
 
 This section describes key Makefile variables you can adjust to customize the firmware:
 
+
 - **HAS_DEBUG**: Controls debug logging; set to `1` to enable or `0` to disable (default).
 - **MAX_KEYS**: Defines the maximum number of keys supported;
+- **HAS_BATTERY**: Enables battery level reporting; set to `1` to enable or `0` to disable (default);
 - **KEY_ROTATION_INTERVAL**: Sets the key rotation interval in seconds (default is 3600 * 3 seconds);
-- **ADVERTISING_INTERVAL**: Adjusts Bluetooth advertising interval; `0` (default) uses the standard interval (1000ms);
+- **ADVERTISING_INTERVAL**: Adjusts Bluetooth advertising interval; `0` (default) uses the standard interval (1000ms, down to 20ms);
 - **BOARD**: Specifies the custom board configuration; defaults to `custom_board` (see `custom_board.h`), but can be overridden with your board's configuration. For example, set `BOARD=yj17024` for the nRF52832 device.
 - **ADV_KEYS_FILE**: Specifies the file containing the keys to be flashed to the device.
 - **GNU_INSTALL_ROOT**: Path to the GNU toolchain; eg: ../../nrf-sdk/gcc-arm-none-eabi-6-2017-q2-update/bin/

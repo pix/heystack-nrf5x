@@ -30,23 +30,42 @@ void ble_set_max_tx_power(void)
 {
     uint32_t err_code;
     // Set the transmit power to the maximum allowed by the hardware.
-    int8_t powers[] = { 8, 7, 6, 5, 4 };
-    for (int i = 0; i < sizeof(powers) / sizeof(powers[0]); i++) {
-        int8_t max_tx_power = powers[i];
+    static int8_t max_tx_power = -1;
+
+    if (max_tx_power == -1) {
+        int8_t powers[] = { 8, 7, 6, 5, 4 };  // List of possible power levels
+        size_t num_powers = sizeof(powers) / sizeof(powers[0]);
+
+        for (size_t i = 0; i < num_powers; i++) {
+            int8_t tx_power = powers[i];
+            #if NRF_SDK_VERSION >= 15
+            err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, adv_handle, tx_power);
+            #else
+            err_code = sd_ble_gap_tx_power_set(tx_power);
+            #endif
+
+            if (err_code == NRF_SUCCESS) {
+                max_tx_power = tx_power;
+                COMPAT_NRF_LOG_INFO("ble_set_max_tx_power: %d dBm", max_tx_power);
+                break;
+            } else {
+                COMPAT_NRF_LOG_INFO("ble_set_max_tx_power: %d dBm failed", tx_power);
+            }
+        }
+
+        // If none of the power levels succeeded, handle the error
+        if (max_tx_power == -1) {
+            APP_ERROR_CHECK(err_code);  // Will trigger an error since err_code is not NRF_SUCCESS
+        }
+    } else {
+        // max_tx_power has been determined previously, set it directly
         #if NRF_SDK_VERSION >= 15
         err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, adv_handle, max_tx_power);
         #else
         err_code = sd_ble_gap_tx_power_set(max_tx_power);
         #endif
-        max_tx_power = powers[i];
-        if (err_code == NRF_SUCCESS) {
-            COMPAT_NRF_LOG_INFO("ble_set_max_tx_power: %d dBm", max_tx_power);
-            break;
-        } else {
-            COMPAT_NRF_LOG_INFO("ble_set_max_tx_power: %d dBm failed", max_tx_power);
-        }
+        APP_ERROR_CHECK(err_code);
     }
-    APP_ERROR_CHECK(err_code);
 }
 
 /*
@@ -212,7 +231,8 @@ void set_battery(uint8_t battery_level)
     }else{
         status_flag |= STATUS_FLAG_CRITICALLY_LOW_BATTERY;
     }
-
+    COMPAT_NRF_LOG_INFO("Battery level: %d, status: %d%d",
+            battery_level, (status_flag >> 7) & 1, (status_flag >> 6) & 1);
 	_set_status(status_flag);
 }
 

@@ -38,7 +38,6 @@
 #define STATUS_FLAG_MEDIUM_BATTERY         0b01000000
 #define STATUS_FLAG_LOW_BATTERY            0b10000000
 #define STATUS_FLAG_CRITICALLY_LOW_BATTERY 0b11000000
-#define STATUS_FLAG_MAINTAINED             0b00000100
 
 #ifndef ADVERTISING_INTERVAL
 #define ADVERTISING_INTERVAL 1000
@@ -46,4 +45,5 @@
 
 void ble_advertising_init(void);
 void ble_set_max_tx_power(void);
+void set_battery(uint8_t battery_level);
 uint8_t ble_set_advertisement_key(const char *key);

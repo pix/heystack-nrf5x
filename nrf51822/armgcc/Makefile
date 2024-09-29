@@ -14,6 +14,15 @@ SOFTDEVICE_VERSION := 2.0.1
 $(OUTPUT_DIRECTORY)/nrf51822_xxac.out: \
   LINKER_SCRIPT  := ble_app_haystack_gcc_nrf51.ld
 
+ifeq ($(HAS_BATTERY), 1)
+  SRC_FILES += \
+    $(SDK_ROOT)/components/libraries/eddystone/es_battery_voltage_adc.c \
+    $(SDK_ROOT)/components/drivers_nrf/adc/nrf_drv_adc.c
+
+  CFLAGS += -DADC_ENABLED=1 -DHAS_BATTERY=1
+  ASMFLAGS += -DADC_ENABLED=1 -DHAS_BATTERY=1
+endif
+
 # Source files common to all targets
 SRC_FILES += \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_serial.c \

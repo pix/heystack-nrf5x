@@ -52,6 +52,15 @@
 #include "app_timer.h"
 #include "app_button.h"
 #include "main.h"
+#include "math.h"
+
+#if defined(BATTERY_LEVEL) && BATTERY_LEVEL == 1
+#if NRF_SDK_VERSION < 15
+#include "libraries/eddystone/es_battery_voltage.h"
+#else
+#include "ble/ble_services/eddystone/es_battery_voltage.h"
+#endif
+#endif
 
 // Create space for MAX_KEYS public keys
 static const char public_key[MAX_KEYS+1][28] = {
@@ -77,26 +86,25 @@ int randmod(int mod) {
         return -1;  // Invalid modulus.
     }
 
-    uint8_t buffer[2];  // Buffer to hold 2 random bytes (16 bits).
-    uint16_t x;
-    const uint16_t R_MAX = (UINT16_MAX / mod) * mod;
+    uint8_t buffer[4];  // Buffer to hold 2 random bytes (16 bits).
+    uint32_t x;
+    const uint32_t R_MAX = (UINT32_MAX / mod) * mod;
 
     uint8_t bytes_available = 0;
     uint32_t err_code;
 
-    // Wait until there are enough random bytes available (at least 2 bytes).
+    // Wait until there are enough random bytes available (at least 4 bytes).
     do {
         err_code = sd_rand_application_bytes_available_get(&bytes_available);
         APP_ERROR_CHECK(err_code);
     } while (bytes_available < sizeof(buffer));
 
     do {
-        // Get 2 random bytes and combine them into a 16-bit number.
+        // Get 4 random bytes and combine them into a 16-bit number.
         err_code = sd_rand_application_vector_get(buffer, sizeof(buffer));
         APP_ERROR_CHECK(err_code);
-
-        // Combine the two bytes into a 16-bit integer.
-        x = (buffer[0] << 8) | buffer[1];
+        // Combine the two bytes into a 32-bit integer.
+        x = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
     } while (x >= R_MAX);  // Discard if the number is out of the acceptable range.
 
     return x % mod;  // Return the modulo result.
@@ -137,6 +145,40 @@ static void pa_lna_assist(uint32_t gpio_pa_pin, uint32_t gpio_lna_pin)
 }
 #endif
 
+#if defined(BATTERY_LEVEL) && BATTERY_LEVEL == 1
+#define BATTERY_VOLTAGE_MIN (1800.0)
+#define BATTERY_VOLTAGE_MAX (3300.0)
+#define ROTATION_PER_DAY ((24 * 60 * 60) / KEY_ROTATION_INTERVAL)
+
+uint8_t read_nrf_battery_voltage_percent(void)
+{
+    uint16_t real_vbatt;
+    es_battery_voltage_get(&real_vbatt);
+
+    uint16_t vbatt = MIN(real_vbatt, BATTERY_VOLTAGE_MAX);
+    vbatt = (vbatt - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100;
+
+    COMPAT_NRF_LOG_INFO("Battery voltage: %d mV, %d%% (min: %d mV, max: %d mV)", real_vbatt, vbatt, BATTERY_VOLTAGE_MIN, BATTERY_VOLTAGE_MAX);
+
+    return vbatt;
+}
+
+void update_battery_level(void)
+{
+    static uint32_t rotation = 0;
+
+    if (rotation == 0) {
+        COMPAT_NRF_LOG_INFO("Updating battery level: %d / %d", rotation, ROTATION_PER_DAY);
+        uint8_t battery_level = read_nrf_battery_voltage_percent();
+        set_battery(battery_level);
+    } else {
+        COMPAT_NRF_LOG_INFO("Skipping battery level update: %d / %d", rotation, ROTATION_PER_DAY);
+    }
+
+    rotation = (rotation + 1) % ROTATION_PER_DAY;
+}
+#endif
+
 void set_and_advertise_next_key(void *p_context)
 {
     #if defined(RANDOM_ROTATE_KEYS) && RANDOM_ROTATE_KEYS == 1
@@ -147,10 +189,15 @@ void set_and_advertise_next_key(void *p_context)
         current_index = (current_index + 1) % (last_filled_index + 1);
     #endif
 
+    if (current_index < 0 || current_index > last_filled_index) {
+        COMPAT_NRF_LOG_INFO("Invalid key index: %d", current_index);
+        current_index = 0;
+    }
+
     #if defined(BATTERY_LEVEL) && BATTERY_LEVEL == 1
         update_battery_level();
     #endif
-    
+
     // Set key to be advertised
     ble_set_advertisement_key(public_key[current_index]);
     COMPAT_NRF_LOG_INFO("Rotating key: %d", current_index);
@@ -305,6 +352,10 @@ int main(void)
     // Initialize.
     log_init();
 
+    #if defined(BATTERY_LEVEL) && BATTERY_LEVEL == 1
+        es_battery_voltage_init();
+    #endif
+
     // Find the last filled index
     for (int i = MAX_KEYS - 2; i >= 0; i--)
     {
@@ -314,7 +365,26 @@ int main(void)
             break;
         }
     }
-    COMPAT_NRF_LOG_INFO("last_filled_index: %d", last_filled_index);
+
+    // Precompute necessary values using integer arithmetic
+    uint32_t rotation_interval_sec = last_filled_index * KEY_ROTATION_INTERVAL;
+    // Calculate hours scaled by 100 to preserve two decimal places
+    uint32_t rotation_interval_hours_scaled = (rotation_interval_sec * 100) / 3600;
+    // Calculate rotations per day scaled by 100
+    uint32_t rotation_per_day_scaled = (86400 * 100) / rotation_interval_sec;
+
+    // Log the information
+    COMPAT_NRF_LOG_INFO("[KEYS] Last filled index: %d", last_filled_index);
+
+    COMPAT_NRF_LOG_INFO("[TIMING] Full key rotation interval: %d seconds (%d.%02d hours)",
+                    rotation_interval_sec,
+                    rotation_interval_hours_scaled / 100,
+                    rotation_interval_hours_scaled % 100);
+
+    COMPAT_NRF_LOG_INFO("[TIMING] Rotation per Day: %d.%02d",
+                    rotation_per_day_scaled / 100,
+                    rotation_per_day_scaled % 100);
+
 
     // Initialize the timer module.
     timers_init();
@@ -324,7 +394,7 @@ int main(void)
     {
         timer_config();
     }
-    
+
     // Initialize the power management module.
     power_management_init();
 

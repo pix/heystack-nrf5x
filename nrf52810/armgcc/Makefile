@@ -14,6 +14,15 @@ SOFTDEVICE_MODEL := s112
 SOFTDEVICE_FLAGS := -DS112
 SOFTDEVICE_VERSION := 6.1.1
 
+ifeq ($(HAS_BATTERY), 1)
+  SRC_FILES += \
+    $(SDK_ROOT)/components/ble/ble_services/eddystone/es_battery_voltage_saadc.c \
+    $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_saadc.c
+
+  CFLAGS += -DSAADC_ENABLED=1 -DHAS_BATTERY=1
+  ASMFLAGS += -DSAADC_ENABLED=1 -DHAS_BATTERY=1
+endif
+
 # Source files common to all targets
 SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52810.S \
