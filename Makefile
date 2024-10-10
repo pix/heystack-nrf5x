@@ -51,7 +51,7 @@ $(1):
 
 $(1)-clean:
 	$$(MAKE) -C $$(DIR_$(1))/armgcc clean \
-		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$$(DIR_$(1))),$$(GNU_INSTALL_ROOT)/,$$(GNU_INSTALL_ROOT)/bin/)
+		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$$(DIR_$(1))),$$(GNU_INSTALL_ROOT),$$(GNU_INSTALL_ROOT)/bin/)
 
 endef
 
