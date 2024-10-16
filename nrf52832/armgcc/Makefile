@@ -1,5 +1,5 @@
 PROJECT_NAME     := ble_app_haystack_s132
-TARGETS          := nrf52832_xxaa nrf52832_yj17024
+TARGETS          := nrf52832_xxaa nrf52832_xxaa-dcdc nrf52832_yj17024
 OUTPUT_DIRECTORY := _build
 
 NRF_ROOT := ../..
@@ -274,6 +274,13 @@ nrf52832_xxaa: CFLAGS += -D__HEAP_SIZE=8192
 nrf52832_xxaa: CFLAGS += -D__STACK_SIZE=8192
 nrf52832_xxaa: ASMFLAGS += -D__HEAP_SIZE=8192
 nrf52832_xxaa: ASMFLAGS += -D__STACK_SIZE=8192
+
+nrf52832_xxaa-dcdc: CFLAGS += -D__HEAP_SIZE=8192
+nrf52832_xxaa-dcdc: CFLAGS += -D__STACK_SIZE=8192
+nrf52832_xxaa-dcdc: CFLAGS += -DHAS_DCDC=1
+nrf52832_xxaa-dcdc: ASMFLAGS += -D__HEAP_SIZE=8192
+nrf52832_xxaa-dcdc: ASMFLAGS += -D__STACK_SIZE=8192
+nrf52832_xxaa-dcdc: ASMFLAGS += -DHAS_DCDC=1
 
 nrf52832_yj17024: CFLAGS += -D__HEAP_SIZE=8192
 nrf52832_yj17024: CFLAGS += -D__STACK_SIZE=8192

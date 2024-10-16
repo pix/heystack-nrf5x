@@ -1,5 +1,5 @@
 PROJECT_NAME     := ble_app_haystack_$(SOFTDEVICE_MODEL)
-TARGETS          := nrf51822_xxac
+TARGETS          := nrf51822_xxac nrf51822_xxac-dcdc
 OUTPUT_DIRECTORY := _build
 
 NRF_ROOT := ../..
@@ -12,6 +12,9 @@ SOFTDEVICE_FLAGS := -DS130
 SOFTDEVICE_VERSION := 2.0.1
 
 $(OUTPUT_DIRECTORY)/nrf51822_xxac.out: \
+  LINKER_SCRIPT  := ble_app_haystack_gcc_nrf51.ld
+
+  $(OUTPUT_DIRECTORY)/nrf51822_xxac-dcdc.out: \
   LINKER_SCRIPT  := ble_app_haystack_gcc_nrf51.ld
 
 ifeq ($(HAS_BATTERY), 1)
@@ -203,6 +206,9 @@ LDFLAGS += --specs=nano.specs -lc -lnosys
 
 # Default target - first one defined
 default: nrf51822_xxac
+
+nrf51822_xxac-dcdc: CFLAGS += -DHAS_DCDC=1
+nrf51822_xxac-dcdc: ASMFLAGS += -DHAS_DCDC=1
 
 # Print all targets that can be built
 help:

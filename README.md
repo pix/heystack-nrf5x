@@ -30,6 +30,12 @@ This AliExpress tag works with the nRF52832 firmware:
 
 These are affiliate links, so if you buy something using them, I get a small commission, and you help me to keep working on this project.
 
+### Available make targets
+
+- `nrf51822/armgcc`: `nrf51822_xxac` `nrf51822_xxac-dcdc`
+- `nrf52810/armgcc`: `nrf52810_xxaa` `nrf52810_xxaa-dcdc`
+- `nrf52832/armgcc`: `nrf52832_xxaa` `nrf52832_xxaa-dcdc` `nrf52832_yj17024`
+
 ## Setup Instructions
 
 Unzip the relevant Nordic SDK and a compiler and place it in the `nrf-sdk` folder:
@@ -94,6 +100,7 @@ This section describes key Makefile variables you can adjust to customize the fi
 - **HAS_DEBUG**: Controls debug logging; set to `1` to enable or `0` to disable (default).
 - **MAX_KEYS**: Defines the maximum number of keys supported;
 - **HAS_BATTERY**: Enables battery level reporting; set to `1` to enable or `0` to disable (default);
+- **HAS_DCDC**: Enables DCDC mode; set to `1` to enable or `0` to for automatic selection (default);
 - **KEY_ROTATION_INTERVAL**: Sets the key rotation interval in seconds (default is 3600 * 3 seconds);
 - **ADVERTISING_INTERVAL**: Adjusts Bluetooth advertising interval; `0` (default) uses the standard interval (1000ms, down to 20ms);
 - **BOARD**: Specifies the custom board configuration; defaults to `custom_board` (see `custom_board.h`), but can be overridden with your board's configuration. For example, set `BOARD=yj17024` for the nRF52832 device.

@@ -1,5 +1,5 @@
 PROJECT_NAME     := ble_app_haystack_s112
-TARGETS          := nrf52810_xxaa
+TARGETS          := nrf52810_xxaa nrf52810_xxaa-dcdc
 OUTPUT_DIRECTORY := _build
 
 NRF_ROOT := ../..
@@ -7,6 +7,9 @@ SDK_ROOT := $(NRF_ROOT)/nrf-sdk/nRF5_SDK_15.3.0_59ac345
 PROJ_DIR := ../..
 
 $(OUTPUT_DIRECTORY)/nrf52810_xxaa.out: \
+  LINKER_SCRIPT  := ble_app_haystack_gcc_nrf52.ld
+
+$(OUTPUT_DIRECTORY)/nrf52810_xxaa-dcdc.out: \
   LINKER_SCRIPT  := ble_app_haystack_gcc_nrf52.ld
 
 NRF_BASE_MODEL := nrf52
@@ -241,10 +244,16 @@ nrf52810_xxaa: CFLAGS += -D__STACK_SIZE=2048
 nrf52810_xxaa: ASMFLAGS += -D__HEAP_SIZE=2048
 nrf52810_xxaa: ASMFLAGS += -D__STACK_SIZE=2048
 
+nrf52810_xxaa-dcdc: CFLAGS += -D__HEAP_SIZE=2048
+nrf52810_xxaa-dcdc: CFLAGS += -D__STACK_SIZE=2048
+nrf52810_xxaa-dcdc: CFLAGS += -DHAS_DCDC
+nrf52810_xxaa-dcdc: ASMFLAGS += -D__HEAP_SIZE=2048
+nrf52810_xxaa-dcdc: ASMFLAGS += -D__STACK_SIZE=2048
+nrf52810_xxaa-dcdc: ASMFLAGS += -DHAS_DCDC
+
 # Add standard libraries at the very end of the linker input, after all objects
 # that may need symbols provided by these libraries.
 LIB_FILES += -lc -lnosys -lm
-
 
 .PHONY: default help
 
