@@ -202,7 +202,7 @@ LDFLAGS += -Wl,--gc-sections
 LDFLAGS += --specs=nano.specs -lc -lnosys
 
 
-.PHONY: $(TARGETS) default all clean help flash flash_softdevice
+.PHONY: $(TARGETS) default all clean help flash flash_softdevice help-msg
 
 # Default target - first one defined
 default: nrf51822_xxac
@@ -211,9 +211,14 @@ nrf51822_xxac-dcdc: CFLAGS += -DHAS_DCDC=1 -DPOWER_CONFIG_DEFAULT_DCDCEN=1
 nrf51822_xxac-dcdc: ASMFLAGS += -DHAS_DCDC=1 -DPOWER_CONFIG_DEFAULT_DCDCEN=1
 
 # Print all targets that can be built
-help:
+help: help-msg
+
+help-msg::
 	@echo following targets are available:
-	@echo 	nrf51822_xxac nrf51822_xxac-dcdc
+	@echo - nrf51822_xxac
+	@echo - nrf51822_xxac-dcdc
+	@echo
+	@echo the following targets are available:
 
 TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
 

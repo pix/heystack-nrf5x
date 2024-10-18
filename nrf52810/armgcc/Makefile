@@ -255,18 +255,20 @@ nrf52810_xxaa-dcdc: ASMFLAGS += -DHAS_DCDC=1 -DNRFX_POWER_CONFIG_DEFAULT_DCDCEN=
 # that may need symbols provided by these libraries.
 LIB_FILES += -lc -lnosys -lm
 
-.PHONY: default help
+.PHONY: default help help-msg
 
 # Default target - first one defined
 default: nrf52810_xxaa
 
 # Print all targets that can be built
-help:
+help: help-msg
+
+help-msg::
 	@echo following targets are available:
-	@echo		nrf52810_xxaa
-	@echo		flash_softdevice
-	@echo		sdk_config - starting external tool for editing sdk_config.h
-	@echo		flash      - flashing binary
+	@echo - nrf52810_xxaa
+	@echo - nrf52810_xxaa-dcdc
+	@echo
+	@echo the following targets are available:
 
 TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
 

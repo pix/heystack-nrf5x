@@ -63,6 +63,9 @@ merge_$(1): $(1)
 	mergehex -m $$(OUTPUT_DIRECTORY)/$(1).hex \
 	$$(SDK_ROOT)/components/softdevice/$$(SOFTDEVICE_MODEL)/hex/$$(SOFTDEVICE_MODEL)_$$(NRF_BASE_MODEL)_$$(SOFTDEVICE_VERSION)_softdevice.hex \
 	-o $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).hex
+
+help-msg::
+	@echo merge_$(1) - merge application and softdevice for $(1)
 endef
 
 $(foreach target,$(TARGETS),$(eval $(call merge_target,$(target))))
@@ -73,6 +76,9 @@ define build_target
 bin_$(1): merge_$(1)
 	hex2bin.py $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).hex \
 	$$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).bin
+
+help-msg::
+	@echo bin_$(1) - convert hex to bin for $(1)
 endef
 
 $(foreach target,$(TARGETS),$(eval $(call build_target,$(target))))
@@ -84,6 +90,9 @@ patched_$(1): bin_$(1) $(ADV_KEYS_FILE)
 	xxd -p -c 100000 $$(ADV_KEYS_FILE) | xxd -r -p | dd of=$$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin skip=1 bs=1 seek=$$(shell grep -oba OFFLINEFINDINGPUBLICKEYHERE! $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL).bin | cut -d ':' -f 1) conv=notrunc
 	xxd -p -c 100000 $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin | grep -q $$(shell echo -n ENDOFKEYSENDOFKEYSENDOFKEYS! | xxd -p -c 100) || (echo "The key was not patched correctly!"; exit 1)
 	$$(OBJCOPY) -I binary -O elf32-littlearm -B arm $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.bin $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.elf
+
+help-msg::
+	@echo patched_$(1) - patch $(1) with keys from $(ADV_KEYS_FILE) for $(1)
 endef
 
 $(foreach target,$(TARGETS),$(eval $(call patch_target,$(target))))
@@ -131,6 +140,10 @@ bmpflash-monitor:
 			   -ex 'mon rtt enable' \
 			   -ex 'run'
 
+help-msg::
+	@echo bmpflash-unlock - erase all flash memory using Black Magic Probe
+	@echo bmpflash-monitor - monitor the device using Black Magic Probe
+
 define flash_targets
 .PHONY: stflash-$(1)-patched bmpflash-$(1)-patched
 stflash-$(1)-patched: patched_$(1)
@@ -147,6 +160,10 @@ bmpflash-$(1)-patched: patched_$(1)
 			   -ex 'compare-sections' \
 			   -ex 'kill' \
 	           $$(OUTPUT_DIRECTORY)/$(1)_$$(SOFTDEVICE_MODEL)_patched.elf
+
+help-msg::
+	@echo stflash-$(1)-patched - flash $(1) with softdevice for $(1)
+	@echo bmpflash-$(1)-patched - flash $(1) with softdevice for $(1) using Black Magic Probe
 endef
 
 $(foreach target, $(TARGETS), $(eval $(call flash_targets,$(target))))

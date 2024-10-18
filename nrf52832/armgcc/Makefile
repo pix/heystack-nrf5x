@@ -293,18 +293,21 @@ nrf52832_yj17024: override BOARD = yj17024
 LIB_FILES += -lc -lnosys -lm
 
 
-.PHONY: default help
+.PHONY: default help help-msg
 
 # Default target - first one defined
 default: nrf52832_xxaa
 
 # Print all targets that can be built
-help:
+help: help-msg
+
+help-msg::
 	@echo following targets are available:
-	@echo		nrf52832_xxaa nrf52832_yj17024
-	@echo		flash_softdevice
-	@echo		sdk_config - starting external tool for editing sdk_config.h
-	@echo		flash      - flashing binary
+	@echo - nrf52832_xxaa
+	@echo - nrf52832_xxaa-dcdc
+	@echo - nrf52832_yj17024
+	@echo
+	@echo the following targets are available:
 
 TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
 
