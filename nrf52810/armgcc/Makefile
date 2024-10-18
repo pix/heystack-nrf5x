@@ -246,10 +246,10 @@ nrf52810_xxaa: ASMFLAGS += -D__STACK_SIZE=2048
 
 nrf52810_xxaa-dcdc: CFLAGS += -D__HEAP_SIZE=2048
 nrf52810_xxaa-dcdc: CFLAGS += -D__STACK_SIZE=2048
-nrf52810_xxaa-dcdc: CFLAGS += -DHAS_DCDC
+nrf52810_xxaa-dcdc: CFLAGS += -DHAS_DCDC=1 -DNRFX_POWER_CONFIG_DEFAULT_DCDCEN=1
 nrf52810_xxaa-dcdc: ASMFLAGS += -D__HEAP_SIZE=2048
 nrf52810_xxaa-dcdc: ASMFLAGS += -D__STACK_SIZE=2048
-nrf52810_xxaa-dcdc: ASMFLAGS += -DHAS_DCDC
+nrf52810_xxaa-dcdc: ASMFLAGS += -DHAS_DCDC=1 -DNRFX_POWER_CONFIG_DEFAULT_DCDCEN=1
 
 # Add standard libraries at the very end of the linker input, after all objects
 # that may need symbols provided by these libraries.
