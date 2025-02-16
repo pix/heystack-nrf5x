@@ -35,7 +35,7 @@ TOOLCHAIN_DIR := $(shell dirname $(GNU_INSTALL_ROOT_NO_SLASH))
 
 $(1):
 	$$(MAKE) -C $$(DIR_$(1))/armgcc \
-		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$$(DIR_$(1))),$$(GNU_INSTALL_ROOT)/,$$(GNU_INSTALL_ROOT)/bin/) \
+		GNU_INSTALL_ROOT=$$(if $$(findstring nrf51,$$(DIR_$(1))),$$(GNU_INSTALL_ROOT),$$(GNU_INSTALL_ROOT)/bin/) \
 		MAX_KEYS=$(MAX_KEYS) \
 		HAS_DEBUG=$(HAS_DEBUG) \
 		HAS_BATTERY=$(HAS_BATTERY) \
